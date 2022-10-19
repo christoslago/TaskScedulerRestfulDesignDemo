@@ -2,84 +2,45 @@ using FirstAPI.Enums;
 using FirstAPI.Models;
 using Logic.DTOs;
 using Logic.Services.Interfaces;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Identity.Web.Resource;
 using Microsoft.OpenApi.Extensions;
+using Sample.API.Controllers;
+using System.Net;
 
 namespace FirstAPI.Controllers
 {
+    [Authorize]
     [ApiController]
     [Route("[controller]")]
-    public class PersonsController : ControllerBase
+    public class PersonsController : CoreController<Person>
     {
         private IPersonsService PersonsService;
-        public PersonsController(IPersonsService personsService)
+        public PersonsController(IPersonsService personsService):base(personsService)
         {
             PersonsService = personsService;
         }
-        [HttpGet("GetAll")]
-        public IActionResult GetAll()
-        {
-            var response = PersonsService.GetAllPersons();
-            if (response.Logger.HasErrors)
-            {
-                return BadRequest(response);
-            }
-            return Ok(response);
-        }
-        [HttpGet("GetByID/{id}")]
-        public IActionResult GetByID(Guid id)
-        {
-            var response = PersonsService.GetPersonById(id);
-            if (response.Logger.HasErrors)
-            {
-                return BadRequest(response);
-            }
-            return Ok(response);
-        }
-        [HttpGet("GetByName/{name}")]
-        public IActionResult GetByName(string name)
-        {
-            var response = PersonsService.GetPersonsByName(name);
-            if (response.Logger.HasErrors)
-            {
-                return BadRequest(response);
-            }
-            return Ok(response);
-        }
-        [HttpPost("AddNew")]
-        public IActionResult AddNew(PersonDTO dto)
-        {
-            var response = PersonsService.AddNewPerson(dto);
-            if (response.Logger.HasErrors)
-            {
-                return BadRequest(response);
-            }
-            return Ok(response);
-        }
-        [HttpPatch("Update")]
-        public IActionResult UpdatePerson(PersonDTO dto)
-        {
-            var response = PersonsService.UpdatePerson(dto);
-            if (response.Logger.HasErrors)
-            {
-                return BadRequest(response);
-            }
-            return Ok(response);
-        }
-        [HttpGet("DeleteByID/{id}")]
-        public IActionResult DeletePersonByID(Guid id)
-        {
-            var response = PersonsService.DeletePersonByID(id);
-            if (response.Logger.HasErrors)
-            {
-                return BadRequest(response);
-            }
-            return Ok(response);
-        }       
+        [RequiredScope("data.write")]
         [HttpPost("EditPersonTasks")]
         public IActionResult EditPersonTasks(PersonDTO dto)
         {
-            var response = PersonsService.EditPersonTasks(dto);
+            var userFromFirstName = User.Claims.Single(c => c.Type == "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname").Value;
+            var userFromLastName = User.Claims.Single(c => c.Type == "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname").Value;
+            var assignerName = userFromFirstName + " " + userFromLastName;
+            var response = PersonsService.EditPersonTasks(dto,assignerName);
+            if (response.Logger.HasErrors)
+            {
+                return BadRequest(response);
+            }
+            return Ok(response);
+        }
+        [RequiredScope("data.read")]
+        [HttpGet("MyTasks/{id}")]
+        public IActionResult GetMyTasks(Guid id)
+        {
+            var response = PersonsService.GetPersonTasksDTO(id);
             if (response.Logger.HasErrors)
             {
                 return BadRequest(response);

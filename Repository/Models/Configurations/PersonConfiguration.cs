@@ -14,6 +14,7 @@ namespace Repository.Models.Configurations
         public void Configure(EntityTypeBuilder<Person> builder)
         {
             builder.HasKey(x => x.ID);
+            builder.Property(x => x.Email).IsRequired();
             builder.HasMany(x => x.Tasks).WithOne(x => x.Person).HasForeignKey(x => x.PersonID);
             builder.ToTable("Persons");
         }

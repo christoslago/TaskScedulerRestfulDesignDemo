@@ -8,22 +8,17 @@ using System.Threading.Tasks;
 
 namespace DataRepository.Models
 {
-    public class Task
+    public class Task:CoreModel
     {
-        public Guid ID { get; set; }
-        public string Name { get; set; }
         public string? Description { get; set; }
         public Person Person { get; set; }
         public Guid PersonID { get; set; }
-        public DateTime DateCreated { get; set; }
         public TaskPriorityEnum Priority { get; set; }
         public DateTime ExpiryDate { get; set; }
         public TaskStateEnum State { get; set; }
-        public Task()
+        public Task():base()
         {
-            ID = Guid.NewGuid();
             State = TaskStateEnum.Assigned;
-            DateCreated = DateTime.UtcNow;
             Priority = TaskPriorityEnum.Medium;
         }
     }

@@ -13,41 +13,46 @@ using System.Threading.Tasks;
 
 namespace Logic.Services
 {
-    public class PersonsService : IPersonsService
+    public class PersonsService :CoreService<Person>, IPersonsService
     {
         private DataContext ContextAccessor;
-        public PersonsService(DataContext contextAccessor)
+        public PersonsService(DataContext contextAccessor):base(contextAccessor)
         {
             ContextAccessor = contextAccessor;
+            QueryIncludes();
         }
-        public Envelope<PersonDTO> AddNewPerson(PersonDTO dto)
+        public override void QueryIncludes(List<string> empty = null)
         {
-            var collection = new Envelope<PersonDTO>();
-            var obj = PersonDTO.ConvertFromDTO(dto);
-            ContextAccessor.getDBSet<Person>().Add(obj);
-            ContextAccessor.Entry(obj).State = EntityState.Added;
-            var savedResult = 0;
-            try
+            var lst = new List<string>();
+            lst.Add("Tasks");
+            base.QueryIncludes(lst);
+        }
+
+        public override Person BeforeAdd(Person obj)
+        {
+            var person = base.BeforeAdd(obj);
+            if(person.IdentityType == null)
             {
-                savedResult = ContextAccessor.SaveChanges();
-            }catch(Exception e)
-            {
-                collection.Logger.AddError(e.Message, "Persons.AddNewPerson");
+                person.IdentityType = FirstAPI.Enums.IdentityEnum.User;
             }
             
-            if(savedResult > 0)
+            return person;
+        }
+        public Envelope<PersonDTO> GetPersonTasksDTO(Guid id)
+        {
+            var collection = new Envelope<PersonDTO>();
+            var obj = ContextAccessor.getDBSet<Person>().Where(x => x.ID == id).Include(x => x.Tasks).AsNoTracking().FirstOrDefault();
+            if(obj == null)
             {
-                collection.Collection.Add(PersonDTO.ConvertToDTO(obj));
+                collection.Logger.AddError("Couldn't find your profile", "GetMyTasks");
             }
             else
             {
-                collection.Logger.AddError("Error while writing Database","Persons.AddNewPerson");
+                collection.Collection.Add(PersonDTO.ConvertToDTO(obj));
             }
             return collection;
         }
-
-       
-        public Envelope<PersonDTO> EditPersonTasks(PersonDTO dto)
+        public Envelope<PersonDTO> EditPersonTasks(PersonDTO dto,string assignerName)
         {
             var collection = new Envelope<PersonDTO>();
             var objInDB = ContextAccessor.getDBSet<Person>().Include(x => x.Tasks).Where(x => x.ID == dto.ID).FirstOrDefault();
@@ -80,6 +85,7 @@ namespace Logic.Services
                     taskObj.DateCreated = DateTime.UtcNow;
                     taskObj.PersonID = objInDB.ID;
                     taskObj.Person = objInDB;
+                    taskObj.Description += "\n" + "Assigned by: " + assignerName;
                     objInDB.Tasks.Add(taskObj);
                     ContextAccessor.getDBSet<DataRepository.Models.Task>().Add(taskObj);
                     ContextAccessor.Entry(taskObj).State = EntityState.Added;
@@ -100,103 +106,7 @@ namespace Logic.Services
             }
             return collection;
         }
-        public Envelope<PersonDTO> DeletePersonByID(Guid personID)
-        {
-            var collection = new Envelope<PersonDTO>();
-            var obj = ContextAccessor.getDBSet<Person>().Where(x => x.ID == personID).FirstOrDefault();
-            if(obj == null)
-            {
-                collection.Logger.AddError("Person not found to delete", "Persons.DeletePersonByID");
-                return collection;
-            }
-            var savedResult = 0;
-            ContextAccessor.getDBSet<Person>().Remove(obj);
-            ContextAccessor.Entry(obj).State = EntityState.Deleted;
-            try
-            {
-                savedResult = ContextAccessor.SaveChanges();
-            }catch(Exception e)
-            {
-                collection.Logger.AddError(e.Message, "Persons.DeletePersonByID");
-            }
-            return collection;
-        }
 
-        public Envelope<PersonDTO> GetAllPersons()
-        {
-            var collection = new Envelope<PersonDTO>();
-            var objects = ContextAccessor.getDBSet<Person>().AsNoTracking().Include(x => x.Tasks).ToList();
-            if(objects.Count == 0)
-            {
-                collection.Logger.AddError("No Persons Found", "Persons.GetAllPersons");
-            }
-            else
-            {
-                foreach(var obj in objects)
-                {
-                    collection.Collection.Add(PersonDTO.ConvertToDTO(obj));
-                }
-            }
-            return collection;
-        }
-
-        public Envelope<PersonDTO> GetPersonById(Guid personID)
-        {
-            var collection = new Envelope<PersonDTO>();
-            var obj = ContextAccessor.getDBSet<Person>().AsNoTracking().Where(x => x.ID == personID).Include(x => x.Tasks).FirstOrDefault();
-            if(obj != null)
-            {
-                collection.Collection.Add(PersonDTO.ConvertToDTO(obj));
-            }
-            else
-            {
-                collection.Logger.AddError("Person not found", "Persons.GetPersonById");
-            }
-            return collection;
-        }
-
-        public Envelope<PersonDTO> GetPersonsByName(string personName)
-        {
-            var collection = new Envelope<PersonDTO>();
-            var objects = ContextAccessor.getDBSet<Person>().AsNoTracking().Where(x => x.FirstName.ToLower() == personName.ToLower()).Include(x => x.Tasks).ToList();
-            if (objects.Count > 0)
-            {
-                foreach(var obj in objects)
-                {
-                    collection.Collection.Add(PersonDTO.ConvertToDTO(obj));
-                }
-            }
-            else
-            {
-                collection.Logger.AddError("Person not found", "Persons.GetPersonById");
-            }
-            return collection;
-        }
-
-        public Envelope<PersonDTO> UpdatePerson(PersonDTO dto)
-        {
-            var collection = new Envelope<PersonDTO>();
-            var obj = ContextAccessor.getDBSet<Person>().Where(x => x.ID == dto.ID).FirstOrDefault();
-            if(obj == null)
-            {
-                collection.Logger.AddError("Person not found to update", "Person.UpdatePerson");
-                return collection;
-            }
-            var savedResult = 0;
-            try
-            {
-
-                ContextAccessor.Entry(obj).CurrentValues.SetValues(dto);
-                savedResult = ContextAccessor.SaveChanges();
-            }catch(Exception e)
-            {
-                collection.Logger.AddError(e.Message, "Persons.UpdatePerson");
-            }
-            if(savedResult > 0)
-            {
-                collection.Collection.Add(dto);
-            }
-            return collection;            
-        }
+       
     }
 }

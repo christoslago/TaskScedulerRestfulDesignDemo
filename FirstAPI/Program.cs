@@ -1,9 +1,16 @@
 using Logic.Helpers;
 using Logic.Services;
 using Logic.Services.Interfaces;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Identity.Web;
+using Microsoft.IdentityModel.Logging;
 using Repository.DBContext;
 using Repository.Infrastructure;
+using System.Text.Json.Serialization;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,9 +21,18 @@ builder.Services.AddControllers();
 
 
 IConfiguration configuration = builder.Configuration;
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddMicrosoftIdentityWebApi(options =>
+    {
+        configuration.Bind("AzureAdB2C", options);
 
+        options.TokenValidationParameters.NameClaimType = "name";
+    },
+    options => { configuration.Bind("AzureAdB2C", options); });
+builder.Services.AddControllers().AddJsonOptions(options => options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles);
 builder.Services.AddDbContext<DataContext>(options => options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddScoped<IPersonsService,PersonsService>();
+builder.Services.AddScoped<ISupervisorsService, SupervisorsService>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -33,11 +49,11 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-
+IdentityModelEventSource.ShowPII = true;
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
 app.UseAuthorization();
-
 app.MapControllers();
 
 app.Run();
