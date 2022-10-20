@@ -25,7 +25,6 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddMicrosoftIdentityWebApi(options =>
     {
         configuration.Bind("AzureAdB2C", options);
-
         options.TokenValidationParameters.NameClaimType = "name";
     },
     options => { configuration.Bind("AzureAdB2C", options); });
@@ -33,6 +32,9 @@ builder.Services.AddControllers().AddJsonOptions(options => options.JsonSerializ
 builder.Services.AddDbContext<DataContext>(options => options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddScoped<IPersonsService,PersonsService>();
 builder.Services.AddScoped<ISupervisorsService, SupervisorsService>();
+var smtpOptions = new SmtpParams();
+configuration.Bind(nameof(smtpOptions), smtpOptions);
+builder.Services.AddScoped<IEmailsService,EmailsService>(x => new EmailsService(smtpOptions));
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 

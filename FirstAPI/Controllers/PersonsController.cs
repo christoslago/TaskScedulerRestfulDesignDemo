@@ -38,8 +38,9 @@ namespace FirstAPI.Controllers
         }
         [RequiredScope("data.read")]
         [HttpGet("MyTasks/{id}")]
-        public IActionResult GetMyTasks(Guid id)
+        public IActionResult GetMyTasks()
         {
+            var id = PersonsService.GetMyIDByADPrincipalName(User.Claims.Single(c => c.Type == "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier").Value);
             var response = PersonsService.GetPersonTasksDTO(id);
             if (response.Logger.HasErrors)
             {

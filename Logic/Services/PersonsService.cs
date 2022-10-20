@@ -3,22 +3,28 @@ using FirstAPI.Models;
 using Logic.DTOs;
 using Logic.Helpers;
 using Logic.Services.Interfaces;
+using MailKit.Security;
 using Microsoft.EntityFrameworkCore;
+using MimeKit.Text;
+using MimeKit;
 using Repository.DBContext;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using MailKit.Net.Smtp;
 
 namespace Logic.Services
 {
     public class PersonsService :CoreService<Person>, IPersonsService
     {
         private DataContext ContextAccessor;
-        public PersonsService(DataContext contextAccessor):base(contextAccessor)
+        private IEmailsService MailService;
+        public PersonsService(DataContext contextAccessor, IEmailsService emailService) : base(contextAccessor)
         {
             ContextAccessor = contextAccessor;
+            MailService = emailService;
             QueryIncludes();
         }
         public override void QueryIncludes(List<string> empty = null)
@@ -37,6 +43,33 @@ namespace Logic.Services
             }
             
             return person;
+        }
+        private bool CreatePersonInAzure(Person obj)
+        {
+
+            return true;
+        }
+        public override Envelope<Person> Add(Person obj)
+        {
+            var coll = base.Add(obj);
+            var azureResp = CreatePersonInAzure(obj);
+            if (!azureResp)
+            {
+                coll.Logger.AddError("Problem While saving to Active Directory", "CreateNewUser");
+            }
+            return coll;
+        }
+        public Guid GetMyIDByADPrincipalName(string principalName)
+        {
+            var objFromDB = ContextAccessor.getDBSet<Person>().Where(x => x.AzurePrincipalID == principalName).FirstOrDefault();
+            if(objFromDB != null)
+            {
+                return objFromDB.ID;
+            }
+            else
+            {
+                return Guid.Empty;
+            }
         }
         public Envelope<PersonDTO> GetPersonTasksDTO(Guid id)
         {
@@ -102,11 +135,19 @@ namespace Logic.Services
             if( savedResult > 0)
             {
                 var returnObj = ContextAccessor.getDBSet<Person>().Include(x => x.Tasks).Where(x => x.ID == dto.ID).FirstOrDefault();
-                collection.Collection.Add(PersonDTO.ConvertToDTO(returnObj));
+                var res = MailService.SendTaskWithEmail(returnObj.Tasks.OrderBy(x => x.DateCreated).LastOrDefault(),objInDB.Email,assignerName);
+                if (res)
+                {
+                    collection.Collection.Add(PersonDTO.ConvertToDTO(returnObj));
+                }
+                else
+                {
+                    collection.Logger.AddError("Problem while sending the email", "Person.UpdateTasks");
+                }
             }
             return collection;
         }
 
-       
+        
     }
 }

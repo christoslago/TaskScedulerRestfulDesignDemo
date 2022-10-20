@@ -7,6 +7,7 @@ namespace FirstAPI.Models
     {
         
         public decimal Income { get; set; }
+        public string? AzurePrincipalID { get; set; }
         public List<DataRepository.Models.Task> Tasks { get; set; }
         public Person():base()
         {
