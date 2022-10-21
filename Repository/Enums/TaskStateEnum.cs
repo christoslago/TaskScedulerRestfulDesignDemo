@@ -10,6 +10,8 @@ namespace DataRepository.Enums
     {
         Assigned = 0,
         Started = 1,
-        Finished = 2
+        Finished = 2,
+        Updated = 3,
+        Deleted = 4
     }
 }

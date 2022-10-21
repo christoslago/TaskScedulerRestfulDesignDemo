@@ -27,11 +27,13 @@ namespace Repository.DBContext
         }
 
         public DbSet<Person> Persons { get; set; }
+        public DbSet<Supervisor> Supervisors { get; set; }
         public DbSet<DataRepository.Models.Task> Tasks { get; set; }        
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
             builder.ApplyConfiguration(new PersonConfiguration());
+            builder.ApplyConfiguration(new SupervisorConfiguration());
             builder.ApplyConfiguration(new TaskConfiguration());
         }
     }

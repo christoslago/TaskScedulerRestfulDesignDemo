@@ -12,6 +12,7 @@ namespace Logic.DTOs
         public Guid ID { get; set; }
         public string? FirstName { get; set; }
         public string? LastName { get; set; }
+        public string? Email { get; set; }
         public uint Age { get; set; }
         public double Height { get; set; }
         public double Weight { get; set; }
@@ -29,7 +30,8 @@ namespace Logic.DTOs
                 LastName = obj.LastName,
                 Age = obj.Age,
                 Height = obj.Height,
-                Weight = obj.Weight
+                Weight = obj.Weight,
+                Email = obj.Email
             };
             foreach(var task in obj.Tasks)
             {
@@ -46,7 +48,8 @@ namespace Logic.DTOs
                 LastName = dto.LastName,
                 Age = dto.Age,
                 Height = dto.Height,
-                Weight = dto.Weight
+                Weight = dto.Weight,
+                Email = dto.Email
             };
             foreach(var task in dto.Tasks)
             {
