@@ -12,8 +12,8 @@ using Repository.DBContext;
 namespace DataRepository.Migrations
 {
     [DbContext(typeof(DataContext))]
-    [Migration("20221018112949_20221018_RemovePassCode2")]
-    partial class _20221018_RemovePassCode2
+    [Migration("20221021102942_20221021_UpdatePersonEmail")]
+    partial class _20221021_UpdatePersonEmail
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
@@ -116,6 +116,9 @@ namespace DataRepository.Migrations
 
                     b.Property<long>("Age")
                         .HasColumnType("bigint");
+
+                    b.Property<string>("AzurePrincipalID")
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("DateCreated")
                         .HasColumnType("timestamp with time zone");

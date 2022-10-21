@@ -115,6 +115,9 @@ namespace DataRepository.Migrations
                     b.Property<long>("Age")
                         .HasColumnType("bigint");
 
+                    b.Property<string>("AzurePrincipalID")
+                        .HasColumnType("text");
+
                     b.Property<DateTime>("DateCreated")
                         .HasColumnType("timestamp with time zone");
 

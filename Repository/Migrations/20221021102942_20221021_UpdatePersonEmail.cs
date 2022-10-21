@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace DataRepository.Migrations
 {
-    public partial class _20221018_RemovePassCode2 : Migration
+    public partial class _20221021_UpdatePersonEmail : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {
@@ -15,11 +15,12 @@ namespace DataRepository.Migrations
                 {
                     ID = table.Column<Guid>(type: "uuid", nullable: false),
                     Income = table.Column<decimal>(type: "numeric", nullable: false),
+                    AzurePrincipalID = table.Column<string>(type: "text", nullable: true),
                     DateCreated = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     Name = table.Column<string>(type: "text", nullable: true),
                     FirstName = table.Column<string>(type: "text", nullable: true),
                     LastName = table.Column<string>(type: "text", nullable: true),
-                    Email = table.Column<string>(type: "text", nullable: false),
+                    Email = table.Column<string>(type: "text", nullable: true),
                     IdentityType = table.Column<int>(type: "integer", nullable: false),
                     Age = table.Column<long>(type: "bigint", nullable: false),
                     Height = table.Column<double>(type: "double precision", nullable: false),

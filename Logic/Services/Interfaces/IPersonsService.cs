@@ -13,7 +13,8 @@ namespace Logic.Services.Interfaces
     public interface IPersonsService:ICoreInterface<Person>
     {
         Envelope<PersonDTO> EditPersonTasks(PersonDTO dto,string assignerName);
-        Guid GetMyIDByADPrincipalName(string principalName);
-        Envelope<PersonDTO> GetPersonTasksDTO(Guid id);
+        Envelope<PersonDTO> GetPersonWithTasksDTO(string Upn);
+        Envelope<AzureUserDTO> GetAzureUsers();
+        Envelope<PersonDTO> SavePersonsFromAzureUsers();
     }
 }

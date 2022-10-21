@@ -25,10 +25,16 @@ namespace Logic.Services
             var email = new MimeMessage();
             email.From.Add(MailboxAddress.Parse(SmtpParams.From));
             email.To.Add(MailboxAddress.Parse(emailTO));
-            email.Subject = "You have a new Task";
+            switch (taskObject.State)
+            {
+                case DataRepository.Enums.TaskStateEnum.Assigned : email.Subject = "You have a new Task"; break;
+                case DataRepository.Enums.TaskStateEnum.Updated : email.Subject = "Update on your tasks"; break;
+                default: email.Subject = "Task catch up"; break;
+                    
+            }
             email.Body = new TextPart(TextFormat.Html)
             {
-                Text = $"<h2>New Task from {TaskFrom}</h2>" + "\n" + $"<h3>{taskObject.Name}</h3>" + "\n" + taskObject.Description
+                Text = $"<h2>Task from {TaskFrom}</h2>" + "\n" + $"<h3>{taskObject.Name}</h3>" + "\n" + taskObject.Description
             };
 
             using (var smtp = new SmtpClient())

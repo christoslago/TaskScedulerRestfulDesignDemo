@@ -14,6 +14,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using MailKit.Net.Smtp;
+using Microsoft.Identity.Client;
+using static System.Formats.Asn1.AsnWriter;
+using Microsoft.Graph;
+using Person = FirstAPI.Models.Person;
 
 namespace Logic.Services
 {
@@ -21,10 +25,12 @@ namespace Logic.Services
     {
         private DataContext ContextAccessor;
         private IEmailsService MailService;
-        public PersonsService(DataContext contextAccessor, IEmailsService emailService) : base(contextAccessor)
+        private IAzureService AzureService;
+        public PersonsService(DataContext contextAccessor, IEmailsService emailService,IAzureService azureService) : base(contextAccessor)
         {
             ContextAccessor = contextAccessor;
             MailService = emailService;
+            AzureService = azureService;
             QueryIncludes();
         }
         public override void QueryIncludes(List<string> empty = null)
@@ -49,32 +55,21 @@ namespace Logic.Services
 
             return true;
         }
+       
         public override Envelope<Person> Add(Person obj)
         {
             var coll = base.Add(obj);
-            var azureResp = CreatePersonInAzure(obj);
-            if (!azureResp)
-            {
-                coll.Logger.AddError("Problem While saving to Active Directory", "CreateNewUser");
-            }
+            //var azureResp = CreatePersonInAzure(obj);
+            //if (!azureResp)
+            //{
+            //    coll.Logger.AddError("Problem While saving to Active Directory", "CreateNewUser");
+            //}
             return coll;
-        }
-        public Guid GetMyIDByADPrincipalName(string principalName)
-        {
-            var objFromDB = ContextAccessor.getDBSet<Person>().Where(x => x.AzurePrincipalID == principalName).FirstOrDefault();
-            if(objFromDB != null)
-            {
-                return objFromDB.ID;
-            }
-            else
-            {
-                return Guid.Empty;
-            }
-        }
-        public Envelope<PersonDTO> GetPersonTasksDTO(Guid id)
+        }       
+        public Envelope<PersonDTO> GetPersonWithTasksDTO(string upn)
         {
             var collection = new Envelope<PersonDTO>();
-            var obj = ContextAccessor.getDBSet<Person>().Where(x => x.ID == id).Include(x => x.Tasks).AsNoTracking().FirstOrDefault();
+            var obj = ContextAccessor.getDBSet<Person>().Where(x => x.AzurePrincipalID == upn).Include(x => x.Tasks).AsNoTracking().FirstOrDefault();
             if(obj == null)
             {
                 collection.Logger.AddError("Couldn't find your profile", "GetMyTasks");
@@ -94,19 +89,26 @@ namespace Logic.Services
                 collection.Logger.AddError("Person not found to remove task", "Persons.RemoveTaskFromPerson");
                 return collection;
             }
+            var tasksToAlert = new List<Guid>();
             foreach (var taskObj in objInDB.Tasks)
             {
                 
                 if (dto.Tasks.Select(x => x.ID).Contains(taskObj.ID))
                 {
                     var taskDTO = dto.Tasks.Where(x => x.ID == taskObj.ID).FirstOrDefault();
-                    ContextAccessor.Entry(taskObj).CurrentValues.SetValues(taskDTO);
-                    ContextAccessor.Entry(taskObj).State = EntityState.Modified;
+                    if (taskDTO.ExpiryDate != taskObj.ExpiryDate || taskDTO.Description != taskObj.Description || taskDTO.Name != taskObj.Name || taskDTO.Priority != taskObj.Priority)
+                    {
+                        taskDTO.State = DataRepository.Enums.TaskStateEnum.Updated;
+                        ContextAccessor.Entry(taskObj).CurrentValues.SetValues(taskDTO);
+                        ContextAccessor.Entry(taskObj).State = EntityState.Modified;
+                        tasksToAlert.Add(taskObj.ID);
+                    }
+                   
                 }
                 else
                 {
                     ContextAccessor.getDBSet<DataRepository.Models.Task>().Remove(taskObj);
-                    ContextAccessor.Entry(taskObj).State = EntityState.Deleted;                
+                    ContextAccessor.Entry(taskObj).State = EntityState.Deleted;
                 }
             }
             foreach (var taskDTO in dto.Tasks)
@@ -115,13 +117,15 @@ namespace Logic.Services
                 {
                     var taskObj = TaskDTO.ConvertFromDTO(taskDTO);
                     taskObj.ID = Guid.NewGuid();
+                    taskObj.State = DataRepository.Enums.TaskStateEnum.Assigned;
                     taskObj.DateCreated = DateTime.UtcNow;
                     taskObj.PersonID = objInDB.ID;
                     taskObj.Person = objInDB;
-                    taskObj.Description += "\n" + "Assigned by: " + assignerName;
+                    taskObj.Description += "\n" + " Assigned by: " + assignerName;
                     objInDB.Tasks.Add(taskObj);
                     ContextAccessor.getDBSet<DataRepository.Models.Task>().Add(taskObj);
                     ContextAccessor.Entry(taskObj).State = EntityState.Added;
+                    tasksToAlert.Add(taskObj.ID);
                 }
             }
             var savedResult = 0;
@@ -134,20 +138,76 @@ namespace Logic.Services
             }
             if( savedResult > 0)
             {
-                var returnObj = ContextAccessor.getDBSet<Person>().Include(x => x.Tasks).Where(x => x.ID == dto.ID).FirstOrDefault();
-                var res = MailService.SendTaskWithEmail(returnObj.Tasks.OrderBy(x => x.DateCreated).LastOrDefault(),objInDB.Email,assignerName);
-                if (res)
+                var returnObj = ContextAccessor.getDBSet<FirstAPI.Models.Person>().Include(x => x.Tasks).Where(x => x.ID == dto.ID).FirstOrDefault();
+                foreach(var id in tasksToAlert)
                 {
-                    collection.Collection.Add(PersonDTO.ConvertToDTO(returnObj));
-                }
-                else
-                {
-                    collection.Logger.AddError("Problem while sending the email", "Person.UpdateTasks");
-                }
+                    var res = MailService.SendTaskWithEmail(returnObj.Tasks.Where(x => x.ID == id).FirstOrDefault(), objInDB.Email, assignerName);
+                    if (res)
+                    {
+                        collection.Collection.Add(PersonDTO.ConvertToDTO(returnObj));
+                    }
+                    else
+                    {
+                        collection.Logger.AddError("Problem while sending the email", "Person.UpdateTasks");
+                    }
+                }                
             }
             return collection;
         }
 
-        
+        public Envelope<AzureUserDTO> GetAzureUsers()
+        {
+            var collection = new Envelope<AzureUserDTO>();
+            var azureUsers = AzureService.GetAzureUsers();
+
+            foreach(var usr in azureUsers.Result)
+            {
+                var newUser = new AzureUserDTO();
+                newUser.ID = Guid.Parse(usr.Id);
+                newUser.FullName = usr.DisplayName;
+                newUser.FirstName = usr.GivenName;
+                newUser.LastName = usr.Surname;
+                var ids = usr.Identities.ToList();
+                var mail = ids[0].IssuerAssignedId;
+                newUser.Email = mail;
+                collection.Collection.Add(newUser);
+            }
+            if(azureUsers.Result.Count == 0)
+            {
+                collection.Logger.AddError("No azure users found","GetAzureUsers");
+            }
+            return collection;
+        }
+        public Envelope<PersonDTO> SavePersonsFromAzureUsers()
+        {
+            var azureUsers = this.GetAzureUsers();
+            var collection = new Envelope<PersonDTO>();
+            if (azureUsers.Logger.HasErrors)
+            {
+                collection.Logger.AddError("Problem while fetching azure users", "GetAzureUsers");
+            }
+            else
+            {
+                foreach(var azrUser in azureUsers.Collection)
+                {
+                    var result = Guid.NewGuid();
+                    var foundInDB = ContextAccessor.getDBSet<Person>().Where(x => x.AzurePrincipalID == azrUser.ID.ToString()).AsNoTracking().FirstOrDefault();
+                    if(foundInDB == null)
+                    {
+                        var personObj = new Person {ID = Guid.NewGuid(), AzurePrincipalID = azrUser.ID.ToString(),DateCreated = DateTime.UtcNow,FirstName = azrUser.FirstName,LastName = azrUser.LastName,Email=azrUser.Email};
+                        var addResponse = this.Add(personObj);
+                        if (addResponse.Logger.HasErrors)
+                        {
+                            collection.Logger.AddError("Problem while saving the entity to db", "SaveUserToLocalDB");
+                        }
+                        else
+                        {
+                            collection.Collection.Add(PersonDTO.ConvertToDTO(personObj));
+                        }
+                    }
+                }
+            }
+            return collection;
+        }
     }
 }

@@ -23,7 +23,7 @@ namespace Logic.Services
         }
         public virtual void QueryIncludes(List<string> include)
         {
-            foreach(var incl in include)
+            foreach (var incl in include)
             {
                 QueryIncludesList.Add(incl);
             }
@@ -48,12 +48,11 @@ namespace Logic.Services
             catch (Exception e)
             {
                 collection.Logger.AddError(e.Message, "Add");
-                if(e.InnerException != null)
+                if (e.InnerException != null)
                 {
                     collection.Logger.AddError(e.InnerException.Message, "Add");
                 }
             }
-
             if (savedResult > 0)
             {
                 collection.Collection.Add(obj);
@@ -64,35 +63,27 @@ namespace Logic.Services
             }
             return collection;
         }
+        public virtual Envelope<ObjModel> AfterGet(Envelope<ObjModel> collection)
+        {
+            return collection;
+        }
         public virtual Envelope<ObjModel> GetAll()
         {
             var collection = new Envelope<ObjModel>();
-            dynamic objectSet = null;
-            if(QueryIncludesList.Count > 0)
+            var query = ContextAccessor.getDBSet<ObjModel>().AsQueryable();
+            foreach (var include in QueryIncludesList)
             {
-                foreach (var include in QueryIncludesList)
-                {
-
-                    objectSet = ContextAccessor.getDBSet<ObjModel>().Include(include).ToList();
-                }
+                query = query.Include(include);
             }
-            else
-            {
-                objectSet = ContextAccessor.getDBSet<ObjModel>().ToList();
-            }
-
-
-            var objects = objectSet;
-            if (objects.Count == 0)
+            var objectCollection = query.ToList();
+            if (objectCollection.Count == 0)
             {
                 collection.Logger.AddError("No Record Found", "GetAll");
             }
             else
             {
-                foreach (var obj in objects)
-                {
-                    collection.Collection.Add(obj);
-                }
+                collection.Collection = objectCollection;
+                collection = AfterGet(collection);
             }
             return collection;
         }

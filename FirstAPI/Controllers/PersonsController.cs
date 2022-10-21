@@ -29,6 +29,7 @@ namespace FirstAPI.Controllers
             var userFromFirstName = User.Claims.Single(c => c.Type == "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname").Value;
             var userFromLastName = User.Claims.Single(c => c.Type == "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname").Value;
             var assignerName = userFromFirstName + " " + userFromLastName;
+
             var response = PersonsService.EditPersonTasks(dto,assignerName);
             if (response.Logger.HasErrors)
             {
@@ -37,16 +38,37 @@ namespace FirstAPI.Controllers
             return Ok(response);
         }
         [RequiredScope("data.read")]
-        [HttpGet("MyTasks/{id}")]
+        [HttpGet("MyTasks")]
         public IActionResult GetMyTasks()
         {
-            var id = PersonsService.GetMyIDByADPrincipalName(User.Claims.Single(c => c.Type == "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier").Value);
-            var response = PersonsService.GetPersonTasksDTO(id);
+            var response = PersonsService.GetPersonWithTasksDTO(User.Claims.Single(c => c.Type == "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier").Value);
             if (response.Logger.HasErrors)
             {
                 return BadRequest(response);
             }
             return Ok(response);
+        }
+        [RequiredScope("data.read")]
+        [HttpGet("AzureUsers")]
+        public IActionResult GetAzureUsers()
+        {
+            var resp = PersonsService.GetAzureUsers();
+            if (resp.Logger.HasErrors)
+            {
+                return BadRequest(resp);
+            }
+            return Ok(resp);
+        }
+        [RequiredScope("data.read")]
+        [HttpGet("SaveAzureUsers")]
+        public IActionResult SaveAzureUsers()
+        {
+            var resp = PersonsService.SavePersonsFromAzureUsers();
+            if (resp.Logger.HasErrors)
+            {
+                return BadRequest(resp);
+            }
+            return Ok(resp);
         }
     }
    

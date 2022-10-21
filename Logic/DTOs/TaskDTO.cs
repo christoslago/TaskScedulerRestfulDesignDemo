@@ -1,4 +1,5 @@
 ﻿using DataRepository.Enums;
+using FirstAPI.Models;
 
 namespace Logic.DTOs
 {
@@ -8,6 +9,7 @@ namespace Logic.DTOs
         public string Name { get; set; }
         public string? Description { get; set; }
         public  Guid PersonID { get; set; }
+        public Person? Person { get; set; }
         public DateTime DateCreated { get; set; }
         public TaskPriorityEnum Priority { get; set; }
         public DateTime ExpiryDate { get; set; }

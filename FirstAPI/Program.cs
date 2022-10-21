@@ -24,10 +24,10 @@ IConfiguration configuration = builder.Configuration;
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddMicrosoftIdentityWebApi(options =>
     {
-        configuration.Bind("AzureAdB2C", options);
+        configuration.Bind("AzureOptions", options);
         options.TokenValidationParameters.NameClaimType = "name";
     },
-    options => { configuration.Bind("AzureAdB2C", options); });
+    options => { configuration.Bind("AzureOptions", options); });
 builder.Services.AddControllers().AddJsonOptions(options => options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles);
 builder.Services.AddDbContext<DataContext>(options => options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddScoped<IPersonsService,PersonsService>();
@@ -35,6 +35,9 @@ builder.Services.AddScoped<ISupervisorsService, SupervisorsService>();
 var smtpOptions = new SmtpParams();
 configuration.Bind(nameof(smtpOptions), smtpOptions);
 builder.Services.AddScoped<IEmailsService,EmailsService>(x => new EmailsService(smtpOptions));
+var azureOptions = new AzureParams();
+configuration.Bind(nameof(azureOptions), azureOptions);
+builder.Services.AddScoped<IAzureService,AzureService>(x => new AzureService(azureOptions));
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
