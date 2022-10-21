@@ -11,6 +11,9 @@ using Repository.DBContext;
 using Repository.Infrastructure;
 using System.Text.Json.Serialization;
 using System.Text.Json;
+using Hangfire;
+using Microsoft.Graph.ExternalConnectors;
+using Hangfire.PostgreSql;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -40,7 +43,19 @@ configuration.Bind(nameof(azureOptions), azureOptions);
 builder.Services.AddScoped<IAzureService,AzureService>(x => new AzureService(azureOptions));
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddHangfire(configuration1 => configuration1
+        .SetDataCompatibilityLevel(CompatibilityLevel.Version_170)
+        .UseSimpleAssemblyNameTypeSerializer()
+        .UseRecommendedSerializerSettings()
+        .UsePostgreSqlStorage(
+             configuration.GetConnectionString("DefaultConnection"), new PostgreSqlStorageOptions
+             {
 
+                 AllowUnsafeValues = true,
+                 QueuePollInterval = TimeSpan.FromSeconds(1)
+             }
+            ));
+builder.Services.AddHangfireServer();
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
@@ -53,10 +68,16 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+    app.UseHangfireDashboard("/hangfire");
 }
 IdentityModelEventSource.ShowPII = true;
 app.UseHttpsRedirection();
+app.MapHangfireDashboard();
+using (var serviceScope = app.Services.CreateScope())
+{
 
+    RecurringJob.AddOrUpdate("AddnewUsers", () => serviceScope.ServiceProvider.GetRequiredService<IPersonsService>().SavePersonsFromAzureUsers(), Cron.MinuteInterval(1));
+}
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

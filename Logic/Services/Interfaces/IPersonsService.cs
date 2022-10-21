@@ -14,7 +14,7 @@ namespace Logic.Services.Interfaces
     {
         Envelope<PersonDTO> EditPersonTasks(PersonDTO dto,string assignerName);
         Envelope<PersonDTO> GetPersonWithTasksDTO(string Upn);
-        Envelope<AzureUserDTO> GetAzureUsers();
-        Envelope<PersonDTO> SavePersonsFromAzureUsers();
+        Task<Envelope<AzureUserDTO>> GetAzureUsers();
+        Task<Envelope<PersonDTO>> SavePersonsFromAzureUsers();
     }
 }

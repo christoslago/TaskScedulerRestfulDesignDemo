@@ -155,12 +155,12 @@ namespace Logic.Services
             return collection;
         }
 
-        public Envelope<AzureUserDTO> GetAzureUsers()
+        public async Task<Envelope<AzureUserDTO>> GetAzureUsers()
         {
             var collection = new Envelope<AzureUserDTO>();
-            var azureUsers = AzureService.GetAzureUsers();
+            var azureUsers = await AzureService.GetAzureUsers();
 
-            foreach(var usr in azureUsers.Result)
+            foreach(var usr in azureUsers)
             {
                 var newUser = new AzureUserDTO();
                 newUser.ID = Guid.Parse(usr.Id);
@@ -169,18 +169,18 @@ namespace Logic.Services
                 newUser.LastName = usr.Surname;
                 var ids = usr.Identities.ToList();
                 var mail = ids[0].IssuerAssignedId;
-                newUser.Email = mail;
+                newUser.Email = !String.IsNullOrEmpty(mail)?mail:"nomail";
                 collection.Collection.Add(newUser);
             }
-            if(azureUsers.Result.Count == 0)
+            if(azureUsers.Count == 0)
             {
                 collection.Logger.AddError("No azure users found","GetAzureUsers");
             }
             return collection;
         }
-        public Envelope<PersonDTO> SavePersonsFromAzureUsers()
+        public async Task<Envelope<PersonDTO>> SavePersonsFromAzureUsers()
         {
-            var azureUsers = this.GetAzureUsers();
+            var azureUsers = await this.GetAzureUsers();
             var collection = new Envelope<PersonDTO>();
             if (azureUsers.Logger.HasErrors)
             {
@@ -194,7 +194,13 @@ namespace Logic.Services
                     var foundInDB = ContextAccessor.getDBSet<Person>().Where(x => x.AzurePrincipalID == azrUser.ID.ToString()).AsNoTracking().FirstOrDefault();
                     if(foundInDB == null)
                     {
-                        var personObj = new Person {ID = Guid.NewGuid(), AzurePrincipalID = azrUser.ID.ToString(),DateCreated = DateTime.UtcNow,FirstName = azrUser.FirstName,LastName = azrUser.LastName,Email=azrUser.Email};
+                        var personObj = new Person();
+                        personObj.ID = Guid.NewGuid();
+                        personObj.AzurePrincipalID = azrUser.ID.ToString();
+                        personObj.DateCreated = DateTime.UtcNow;
+                        personObj.FirstName = azrUser.FirstName;
+                        personObj.LastName = azrUser.LastName;
+                        personObj.Email = !String.IsNullOrEmpty(azrUser.Email) ? azrUser.Email : "nomail";
                         var addResponse = this.Add(personObj);
                         if (addResponse.Logger.HasErrors)
                         {

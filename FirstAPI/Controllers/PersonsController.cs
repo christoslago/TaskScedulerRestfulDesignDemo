@@ -53,22 +53,22 @@ namespace FirstAPI.Controllers
         public IActionResult GetAzureUsers()
         {
             var resp = PersonsService.GetAzureUsers();
-            if (resp.Logger.HasErrors)
+            if (resp.Result.Logger.HasErrors)
             {
                 return BadRequest(resp);
             }
-            return Ok(resp);
+            return Ok(resp.Result);
         }
         [RequiredScope("data.read")]
         [HttpGet("SaveAzureUsers")]
         public IActionResult SaveAzureUsers()
         {
             var resp = PersonsService.SavePersonsFromAzureUsers();
-            if (resp.Logger.HasErrors)
+            if (resp.Result.Logger.HasErrors)
             {
                 return BadRequest(resp);
             }
-            return Ok(resp);
+            return Ok(resp.Result);
         }
     }
    
