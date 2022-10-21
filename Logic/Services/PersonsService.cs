@@ -86,9 +86,9 @@ namespace Logic.Services
             var objInDB = ContextAccessor.getDBSet<Person>().Include(x => x.Tasks).Where(x => x.ID == dto.ID).FirstOrDefault();
             if(objInDB == null)
             {
-                collection.Logger.AddError("Person not found to remove task", "Persons.RemoveTaskFromPerson");
+                collection.Logger.AddError("Person not found to remove task", "Persons.EditPersonTasks");
                 return collection;
-            }
+            }           
             var tasksToAlert = new List<Guid>();
             foreach (var taskObj in objInDB.Tasks)
             {
@@ -139,18 +139,24 @@ namespace Logic.Services
             if( savedResult > 0)
             {
                 var returnObj = ContextAccessor.getDBSet<FirstAPI.Models.Person>().Include(x => x.Tasks).Where(x => x.ID == dto.ID).FirstOrDefault();
+                if (objInDB.Email == "mailnotfound")
+                {
+                    collection.Logger.AddError("Person doesnt have an email assigned", "Persons.EditPersonTasks");
+                }
+                var mailSent = false;
                 foreach(var id in tasksToAlert)
                 {
                     var res = MailService.SendTaskWithEmail(returnObj.Tasks.Where(x => x.ID == id).FirstOrDefault(), objInDB.Email, assignerName);
                     if (res)
                     {
-                        collection.Collection.Add(PersonDTO.ConvertToDTO(returnObj));
+                        mailSent = true;
                     }
                     else
                     {
                         collection.Logger.AddError("Problem while sending the email", "Person.UpdateTasks");
                     }
-                }                
+                }
+                collection.Collection.Add(PersonDTO.ConvertToDTO(returnObj));
             }
             return collection;
         }
@@ -169,7 +175,7 @@ namespace Logic.Services
                 newUser.LastName = usr.Surname;
                 var ids = usr.Identities.ToList();
                 var mail = ids[0].IssuerAssignedId;
-                newUser.Email = !String.IsNullOrEmpty(mail)?mail:"nomail";
+                newUser.Email = !String.IsNullOrEmpty(mail)?mail:"mailnotfound";
                 collection.Collection.Add(newUser);
             }
             if(azureUsers.Count == 0)

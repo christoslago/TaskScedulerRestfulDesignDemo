@@ -75,8 +75,7 @@ app.UseHttpsRedirection();
 app.MapHangfireDashboard();
 using (var serviceScope = app.Services.CreateScope())
 {
-
-    RecurringJob.AddOrUpdate("AddnewUsers", () => serviceScope.ServiceProvider.GetRequiredService<IPersonsService>().SavePersonsFromAzureUsers(), Cron.MinuteInterval(1));
+    RecurringJob.AddOrUpdate("AddnewUsers", () => serviceScope.ServiceProvider.GetRequiredService<IPersonsService>().SavePersonsFromAzureUsers(), Cron.MinuteInterval(5));
 }
 app.UseAuthentication();
 app.UseAuthorization();
