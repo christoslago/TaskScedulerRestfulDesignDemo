@@ -1,0 +1,9 @@
+2c3gpq5ekexrft23ev7ztroycgmqxbm3hpeunsfekmvkmjkhygyq
+clientsecret hvz8Q~d2k5mBFswLq2TtW5Hxjmv~GgE52QgFAaPT
+devops api token
+antonis
+
+postmanclient secret 1uR8Q~NjQnf11lVIOA6I4eXYfkfTfxhNjpR1La_V
+
+
+graphSecret 1fs8Q~.cmdBwA_OvNqjIxAHLFAoToaay504VgbfV
